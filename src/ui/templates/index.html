@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kāʻanapali Beach Conditions</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1 class="title">
+                    <i class="fas fa-umbrella-beach"></i>
+                    Kāʻanapali Beach Conditions
+                </h1>
+                <p class="subtitle">AI-powered real-time beach analysis</p>
+            </div>
+            <div class="status-indicator">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Connecting...</span>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Current Conditions Panel -->
+            <section class="conditions-panel">
+                <h2><i class="fas fa-eye"></i> Current Conditions</h2>
+                <div class="conditions-grid">
+                    <div class="condition-card">
+                        <div class="condition-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="condition-info">
+                            <h3>People Count</h3>
+                            <div class="condition-value" id="peopleCount">--</div>
+                            <div class="condition-detail" id="peopleDetail">Loading...</div>
+                        </div>
+                    </div>
+                    
+                    <div class="condition-card">
+                        <div class="condition-icon">
+                            <i class="fas fa-cloud"></i>
+                        </div>
+                        <div class="condition-info">
+                            <h3>Weather</h3>
+                            <div class="condition-value" id="weatherCondition">--</div>
+                            <div class="condition-detail" id="weatherDetail">Loading...</div>
+                        </div>
+                    </div>
+                    
+                    <div class="condition-card">
+                        <div class="condition-icon">
+                            <i class="fas fa-water"></i>
+                        </div>
+                        <div class="condition-info">
+                            <h3>Water Activity</h3>
+                            <div class="condition-value" id="waterActivity">--</div>
+                            <div class="condition-detail" id="waterDetail">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="snapshot-section">
+                    <h3><i class="fas fa-camera"></i> Live Snapshot</h3>
+                    <div class="snapshot-container">
+                        <img id="snapshotImage" src="" alt="Beach snapshot" style="display: none;">
+                        <div class="snapshot-placeholder" id="snapshotPlaceholder">
+                            <i class="fas fa-image"></i>
+                            <p>Loading latest snapshot...</p>
+                        </div>
+                    </div>
+                    <button class="refresh-btn" id="refreshSnapshot">
+                        <i class="fas fa-sync-alt"></i> Refresh Snapshot
+                    </button>
+                </div>
+            </section>
+
+            <!-- Chat Interface -->
+            <section class="chat-section">
+                <h2><i class="fas fa-comments"></i> Ask About Beach Conditions</h2>
+                
+                <div class="chat-container">
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="message bot-message">
+                            <div class="message-avatar">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                            <div class="message-content">
+                                <p>Hi! I'm your beach conditions assistant. Ask me anything about the current conditions at Kāʻanapali Beach!</p>
+                                <div class="message-time">Just now</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="chat-input-container">
+                        <div class="quick-questions">
+                            <button class="quick-btn" data-question="Is it a good time to go to the beach?">
+                                Good time to visit?
+                            </button>
+                            <button class="quick-btn" data-question="How crowded is the beach right now?">
+                                How crowded?
+                            </button>
+                            <button class="quick-btn" data-question="What's the weather like?">
+                                Weather conditions?
+                            </button>
+                            <button class="quick-btn" data-question="How many people are in the water?">
+                                Water activity?
+                            </button>
+                        </div>
+                        
+                        <div class="chat-input-wrapper">
+                            <input type="text" id="chatInput" placeholder="Ask about beach conditions..." maxlength="500">
+                            <button id="sendButton" class="send-btn">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>&copy; 2025 Beach Conditions Agent | Powered by AI & Computer Vision</p>
+            <div class="footer-links">
+                <a href="/docs" target="_blank">API Docs</a>
+                <a href="/health" target="_blank">System Status</a>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Analyzing beach conditions...</p>
+        </div>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>

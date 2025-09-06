@@ -1,0 +1,64 @@
+# Beach Conditions Agent Configuration
+
+# Camera settings
+camera:
+  stream_url: "https://www.youtube.com/watch?v=DNnj_9bVWGI"  # Kaanapali Beach livestream
+  capture_interval: 30  # seconds between captures
+  max_retries: 3
+  timeout: 10
+
+# Model paths and settings
+models:
+  yolo_path: "models/yolo_people.pt"
+  roi_detector_path: "models/roi_detector.pt"
+  yolo_confidence: 0.5
+  yolo_iou: 0.45
+
+# ROI detection settings
+roi:
+  water_color_ranges:
+    - [[100, 50, 50], [130, 255, 255]]  # Blue water HSV ranges
+  beach_color_ranges:
+    - [[10, 50, 50], [30, 255, 255]]    # Sandy beach HSV ranges
+  min_area: 1000  # minimum area for ROI detection
+
+# Weather analysis settings
+weather:
+  cloud_threshold: 200  # HSV value threshold for cloud detection
+  rain_streak_threshold: 0.001
+  sky_region_top: 0.4  # top 40% of image considered sky
+
+# Agent settings
+agent:
+  model: "gpt-3.5-turbo"
+  temperature: 0.7
+  max_tokens: 500
+  system_prompt: |
+    You are a beach conditions assistant for Kāʻanapali Beach in Maui, Hawaii. 
+    Analyze current beach conditions and provide helpful recommendations to visitors.
+    Be friendly, informative, and consider safety factors like crowding and weather.
+
+# API settings
+api:
+  host: "0.0.0.0"
+  port: 8000
+  reload: true
+
+# UI settings
+ui:
+  title: "Kāʻanapali Beach Conditions"
+  theme: "beach"
+  auto_refresh: 30  # seconds
+
+# Data paths
+paths:
+  snapshots: "data/snapshots"
+  training_samples: "data/training_samples"
+  roi_zones: "data/roi_zones.json"
+  models: "models"
+
+# Logging
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "beach_agent.log"
