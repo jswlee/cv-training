@@ -1,0 +1,11 @@
+{"time":"2025-09-08T09:45:59.03224-10:00","level":"INFO","msg":"stream: starting","core version":"0.21.3"}
+{"time":"2025-09-08T09:45:59.420723-10:00","level":"INFO","msg":"stream: created new stream","id":"x76rpp5v"}
+{"time":"2025-09-08T09:45:59.420797-10:00","level":"INFO","msg":"stream: started","id":"x76rpp5v"}
+{"time":"2025-09-08T09:45:59.42083-10:00","level":"INFO","msg":"handler: started","stream_id":"x76rpp5v"}
+{"time":"2025-09-08T09:45:59.421053-10:00","level":"INFO","msg":"writer: started","stream_id":"x76rpp5v"}
+{"time":"2025-09-08T09:45:59.421053-10:00","level":"INFO","msg":"sender: started","stream_id":"x76rpp5v"}
+{"time":"2025-09-08T10:00:09.374343-10:00","level":"INFO","msg":"stream: closing","id":"x76rpp5v"}
+{"time":"2025-09-08T10:00:10.104711-10:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2025-09-08T10:00:10.435194-10:00","level":"INFO","msg":"handler: closed","stream_id":"x76rpp5v"}
+{"time":"2025-09-08T10:00:10.435762-10:00","level":"INFO","msg":"sender: closed","stream_id":"x76rpp5v"}
+{"time":"2025-09-08T10:00:10.435784-10:00","level":"INFO","msg":"stream: closed","id":"x76rpp5v"}

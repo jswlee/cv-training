@@ -1,58 +1,121 @@
-"""
-YOLO training script for beach people detection
-"""
+#!/usr/bin/env python3
+# YOLO training with robust W&B logging (callbacks registered via model.add_callback)
+
 from pathlib import Path
-from ultralytics import YOLO
+import yaml
+import pandas as pd
 import torch
 import wandb
-import yaml
+from ultralytics import YOLO
 
-wandb.login(key="573fddab9d08e1d80ff26c4b879932e595d63175")  # Replace with your actual W&B API key
+
+# ----------------------------- helpers -----------------------------------------
+
+def summarize_dataset(dataset_yaml_path: str) -> dict:
+    cfg = yaml.safe_load(Path(dataset_yaml_path).read_text())
+
+    def _count_images(p):
+        if not p:
+            return 0
+        p = Path(p)
+        if not p.exists():
+            return 0
+        if p.is_file() and p.suffix.lower() in {".txt", ".csv"}:
+            try:
+                return sum(1 for _ in open(p))
+            except Exception:
+                return 0
+        exts = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
+        return sum(1 for f in p.rglob("*") if f.suffix.lower() in exts)
+
+    names = cfg.get("names")
+    if isinstance(names, dict):
+        cls_list = [names[k] for k in sorted(names, key=lambda x: int(x))]
+    elif isinstance(names, list):
+        cls_list = names
+    else:
+        cls_list = []
+
+    return {
+        "dataset_yaml": dataset_yaml_path,
+        "train_images": _count_images(cfg.get("train")),
+        "val_images": _count_images(cfg.get("val")),
+        "test_images": _count_images(cfg.get("test")),
+        "nc": len(cls_list) if cls_list else None,
+        "names": ", ".join(cls_list) if cls_list else None,
+    }
+
+
+def find_run_dir(results, default_dir: Path) -> Path:
+    if hasattr(results, "save_dir") and results.save_dir:
+        return Path(results.save_dir)
+    return default_dir
+
+
+def log_ultralytics_outputs_to_wandb(run_dir: Path, best_model_path: Path):
+    if not wandb.run:
+        return
+
+    csv_path = run_dir / "results.csv"
+    if csv_path.exists():
+        try:
+            df = pd.read_csv(csv_path)
+            wandb.log({"training/results_table": wandb.Table(dataframe=df)})
+            if len(df):
+                last = df.iloc[-1].to_dict()
+                wandb.log({f"summary/{k}": v for k, v in last.items()})
+        except Exception as e:
+            print(f"[warn] Could not parse results.csv: {e}")
+
+    for name in [
+        "results.png",
+        "PR_curve.png", "P_curve.png", "R_curve.png", "F1_curve.png",
+        "confusion_matrix.png",
+    ]:
+        p = run_dir / name
+        if p.exists():
+            wandb.log({f"plots/{p.stem}": wandb.Image(str(p))})
+
+    if best_model_path.exists():
+        artifact = wandb.Artifact(name=f"beach-people-model-{wandb.run.id}", type="model")
+        artifact.add_file(str(best_model_path))
+        wandb.log_artifact(artifact)
+
+
+# ----------------------------- training ----------------------------------------
 
 def train_yolo_model(
-    dataset_yaml: str = "data/manually_annotated_data/data.yaml",
+    dataset_yaml: str = "data/roi_masked_data/data.yaml",
     model_size: str = "yolov8n.pt",
-    epochs: int = 50,
-    batch_size: int = 16,
-    img_size: int = 640,
-    output_dir: str = "models",
-    config_path: str = "config.yaml"
+    epochs: int = 30,
+    batch_size: int = 2,
+    img_size: int = 1920,
+    output_dir: str = "runs",
+    run_name: str = "beach_detection",
+    config_path: str = "config.yaml",
 ):
-    """
-    Train YOLO model for people detection on beach images
-    
-    Args:
-        dataset_yaml: Path to dataset YAML file
-        model_size: YOLO model size (yolov8n.pt, yolov8s.pt, etc.)
-        epochs: Number of training epochs
-        batch_size: Training batch size
-        img_size: Input image size
-        output_dir: Output directory for trained model
-        config_path: Path to config.yaml with W&B settings
-    """
-    print(f"Training YOLO model for beach detection")
-    print(f"Dataset: {dataset_yaml}")
-    print(f"Model: {model_size}")
-    print(f"Epochs: {epochs}")
-    
-    # Load config
-    with open(config_path, 'r') as f:
-        config = yaml.safe_load(f)
-    
-    # Extract W&B settings
-    wandb_config = config.get('wandb', {})
-    use_wandb = wandb_config.get('enabled', False)
-    wandb_project = wandb_config.get('project', 'beach-detection')
-    wandb_name = wandb_config.get('name', 'yolo-beach-training')
-    
-    # Check if dataset exists
-    if not Path(dataset_yaml).exists():
-        raise FileNotFoundError(f"Dataset YAML not found: {dataset_yaml}")
-    
-    # Create output directory
-    Path(output_dir).mkdir(parents=True, exist_ok=True)
-    
-    # Check for GPU availability
+    print("Beach Conditions Agent - YOLO Training")
+    print("=" * 50)
+
+    dspath = Path(dataset_yaml)
+    if not dspath.exists():
+        raise FileNotFoundError(
+            f"Dataset YAML not found: {dataset_yaml}\n"
+            "Please create the ROI-masked dataset first."
+        )
+
+    # W&B config
+    wandb_cfg = {}
+    if Path(config_path).exists():
+        cfg = yaml.safe_load(Path(config_path).read_text())
+        wandb_cfg = cfg.get("wandb", {})
+
+    use_wandb = bool(wandb_cfg.get("enabled", True))
+    project = wandb_cfg.get("project", "beach-detection")
+    run_display = wandb_cfg.get("name", run_name)
+    entity = wandb_cfg.get("entity")
+
+    # Device
     if torch.cuda.is_available():
         device = "cuda"
     elif torch.backends.mps.is_available():
@@ -60,26 +123,62 @@ def train_yolo_model(
     else:
         device = "cpu"
     print(f"Using device: {device}")
-    
-    # Initialize W&B if requested
+
+    # Init W&B before training so Ultralytics attaches its logger
     if use_wandb:
-        # Initialize wandb exactly like the example
-        wandb.init(
-            project=wandb_project,
-            name=wandb_name,
+        init_kwargs = dict(
+            project=project,
+            name=run_display,
             config={
                 "model": model_size,
                 "epochs": epochs,
                 "batch_size": batch_size,
                 "image_size": img_size,
-                "device": device
-            }
+                "device": device,
+                "dataset": dataset_yaml,
+            },
         )
-    
-    # Load YOLO model
+        if entity:
+            init_kwargs["entity"] = entity
+        wandb.init(**init_kwargs)
+
+        wandb.define_metric("epoch")
+        wandb.define_metric("*", step_metric="epoch")
+
+        # Dataset summary (not time-series)
+        ds = summarize_dataset(dataset_yaml)
+        for k, v in ds.items():
+            wandb.run.summary[f"dataset/{k}"] = v
+
+    # Build model
     model = YOLO(model_size)
-    
-    # Train the model
+
+    # Optional: watch gradients/params
+    if use_wandb and hasattr(model, "model"):
+        wandb.watch(model.model, log="gradients", log_freq=100)
+
+    # ---- register callbacks (NOT via train(..., callbacks=...)) ----
+    def on_val_end(trainer):
+        if not wandb.run:
+            return
+        sd = Path(trainer.save_dir)
+        imgs = sorted(sd.glob("val_batch*.jpg"))[:6]
+        if imgs:
+            wandb.log(
+                {"samples/val_batch": [wandb.Image(str(p)) for p in imgs],
+                 "epoch": trainer.epoch}
+            )
+
+    def on_fit_epoch_end(trainer):
+        if not wandb.run:
+            return
+        gpu_mem = (torch.cuda.max_memory_allocated() / 1e9) if torch.cuda.is_available() else 0.0
+        wandb.log({"system/gpu_mem_gb": gpu_mem, "epoch": trainer.epoch})
+
+    model.add_callback("on_val_end", on_val_end)
+    model.add_callback("on_fit_epoch_end", on_fit_epoch_end)
+
+    # Train (Ultralytics streams scalars/plots to W&B automatically)
     results = model.train(
         data=dataset_yaml,
         epochs=epochs,
@@ -87,152 +186,111 @@ def train_yolo_model(
         imgsz=img_size,
         device=device,
         project=output_dir,
-        name="beach_detection",
+        name=run_name,
         save=True,
-        save_period=1,  # Save checkpoint every 1 epochs
-        val=True,  # Validates on validation set during training
+        save_period=1,
+        val=True,
         plots=True,
-        verbose=True
+        verbose=True,
     )
-    
-    # Save the best model to the specified location
-    best_model_path = Path(output_dir) / "beach_detection.pt"
-    model.save(str(best_model_path))
-    
-    print(f"Training completed!")
-    print(f"Best model saved to: {best_model_path}")
-    print(f"Training results: {results}")
-    
+
+    # Determine run dir and best weights
+    run_dir = find_run_dir(results, Path(output_dir) / run_name)
+    best_auto = run_dir / "weights" / "best.pt"
+    best_model_path = Path(output_dir) / f"{run_name}.pt"
+    best_model_path.parent.mkdir(parents=True, exist_ok=True)
+    if best_auto.exists():
+        best_model_path.write_bytes(best_auto.read_bytes())
+    else:
+        model.save(str(best_model_path))
+
+    print(f"Training complete. Best model saved to: {best_model_path}")
+
     if use_wandb:
+        log_ultralytics_outputs_to_wandb(run_dir, best_model_path)
         wandb.finish()
-    
+
     return str(best_model_path)
 
-def validate_model(model_path: str, dataset_yaml: str = "data/manually_annotated_data/data.yaml"):
-    """Validate the trained model on validation set"""
-    print(f"Validating model on validation set: {model_path}")
-    
+
+# ----------------------------- eval / inference -------------------------------
+
+def validate_model(model_path: str, dataset_yaml: str = "data/roi_masked_data/data.yaml"):
+    print(f"Validating on validation set: {model_path}")
     if not Path(model_path).exists():
         raise FileNotFoundError(f"Model not found: {model_path}")
-    
     model = YOLO(model_path)
-    results = model.val(data=dataset_yaml, split='val')  # Explicitly use validation set
-    
-    print("Validation Results (on validation set):")
-    print(f"mAP50: {results.box.map50:.3f}")
-    print(f"mAP50-95: {results.box.map:.3f}")
-    
+    results = model.val(data=dataset_yaml, split="val")
+    print("Validation results:", getattr(results, "results_dict", results))
     return results
 
-def evaluate_on_test(model_path: str, dataset_yaml: str = "data/manually_annotated_data/data.yaml"):
-    """Final evaluation on test set (should be done only once after training)"""
+
+def evaluate_on_test(model_path: str, dataset_yaml: str = "data/roi_masked_data/data.yaml"):
     print(f"Final evaluation on test set: {model_path}")
-    
     if not Path(model_path).exists():
         raise FileNotFoundError(f"Model not found: {model_path}")
-    
     model = YOLO(model_path)
-    results = model.val(data=dataset_yaml, split='test')  # Explicitly use test set
-    
-    print("Test Results (final evaluation on test set):")
-    print(f"mAP50: {results.box.map50:.3f}")
-    print(f"mAP50-95: {results.box.map:.3f}")
-    
+    results = model.val(data=dataset_yaml, split="test")
+    print("Test results:", getattr(results, "results_dict", results))
     return results
+
 
 def test_model_inference(model_path: str, test_image: str = None):
-    """Test model inference on a sample image"""
     if not Path(model_path).exists():
         print(f"Model not found: {model_path}")
         return
-    
-    # Find a test image if not provided
     if test_image is None:
-        test_images_dir = Path("data/manually_annotated_data/test/images")
-        if test_images_dir.exists():
-            test_images = list(test_images_dir.glob("*.jpg"))
-            if test_images:
-                test_image = str(test_images[0])
-    
+        test_dir = Path("data/roi_masked_data/test/images")
+        if test_dir.exists():
+            imgs = list(test_dir.glob("*.jpg")) + list(test_dir.glob("*.png"))
+            if imgs:
+                test_image = str(imgs[0])
     if not test_image or not Path(test_image).exists():
         print("No test image available for inference test")
         return
-    
     print(f"Testing inference on: {test_image}")
-    
     model = YOLO(model_path)
     results = model(test_image)
-    
-    # Print detection results
-    for result in results:
-        boxes = result.boxes
-        if boxes is not None:
-            print(f"Detected {len(boxes)} objects")
-            for box in boxes:
-                conf = box.conf[0].cpu().numpy()
-                cls = int(box.cls[0].cpu().numpy())
-                print(f"  Class: {cls}, Confidence: {conf:.3f}")
-        else:
-            print("No objects detected")
-    
-    # Save result image
-    output_path = "inference_test_result.jpg"
-    results[0].save(output_path)
-    print(f"Result saved to: {output_path}")
+    out = Path("inference_test_result.jpg")
+    results[0].save(out)
+    print(f"Result saved to: {out}")
+
+
+# --------------------------------- main ---------------------------------------
 
 def main():
-    """Main training function"""
-    print("Beach Conditions Agent - YOLO Training")
-    print("=" * 50)
-    
-    # Check if dataset is prepared
-    dataset_yaml = "data/manually_annotated_data/data.yaml"
-    if not Path(dataset_yaml).exists():
-        print(f"Dataset not found: {dataset_yaml}")
-        print("Please ensure your annotated data is in data/manually_annotated_data/")
-        return 1
-    
-    # Check if annotations exist
-    labels_dir = Path("data/manually_annotated_data/train/labels")
+    dataset_yaml = "data/roi_masked_data/data.yaml"
+
+    labels_dir = Path("data/roi_masked_data/train/labels")
     if labels_dir.exists():
-        label_files = list(labels_dir.glob("*.txt"))
-        non_empty_labels = [f for f in label_files if f.stat().st_size > 0]
-        
-        if len(non_empty_labels) == 0:
+        non_empty = [f for f in labels_dir.glob("*.txt") if f.stat().st_size > 0]
+        if not non_empty:
             print("No annotations found in training set!")
-            print("Please ensure your data has annotations")
             return 1
-        
-        print(f"Found {len(non_empty_labels)} annotated images")
-    
+
     try:
-        # Train the model
         model_path = train_yolo_model(
             dataset_yaml=dataset_yaml,
-            epochs=30,  # Reasonable number for initial training
-            batch_size=4,  # Conservative batch size
+            epochs=30,
+            batch_size=2,
             img_size=1920,
-            config_path="config.yaml"  # Load W&B settings from config
+            output_dir="runs",
+            run_name="beach_detection",
+            config_path="config.yaml",
         )
-        
-        print("\nValidating trained model on validation set...")
+        print("\nValidating trained model...")
         validate_model(model_path, dataset_yaml)
-        
-        print("\nPerforming final evaluation on test set...")
+        print("\nEvaluating on test set...")
         evaluate_on_test(model_path, dataset_yaml)
-        
-        print("\nTesting inference...")
+        print("\nTesting single-image inference...")
         test_model_inference(model_path)
-        
-        print(f"\nTraining completed successfully!")
+        print("\nDone.")
         print(f"Trained model: {model_path}")
-        print("You can now use this model with the beach conditions agent.")
-        
     except Exception as e:
         print(f"Training failed: {e}")
         return 1
-    
     return 0
 
+
 if __name__ == "__main__":
-    exit(main())
+    raise SystemExit(main())

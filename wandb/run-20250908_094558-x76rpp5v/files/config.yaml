@@ -1,0 +1,63 @@
+_wandb:
+    value:
+        cli_version: 0.21.3
+        e:
+            8cnlpuky7x28lez05pfi2cbgzn3wzk70:
+                apple:
+                    ecpuCores: 2
+                    gpuCores: 16
+                    memoryGb: 16
+                    name: Apple M1 Pro
+                    pcpuCores: 8
+                    ramTotalBytes: "17179869184"
+                codePath: training/train_yolo.py
+                codePathLocal: training/train_yolo.py
+                cpu_count: 10
+                cpu_count_logical: 10
+                disk:
+                    /:
+                        total: "994662584320"
+                        used: "581266403328"
+                email: jswleetaiwan@gmail.com
+                executable: /usr/local/bin/python3
+                git:
+                    commit: fdc3a4184577d5d0127498733f3981080606183d
+                    remote: https://github.com/jswlee/cv-training.git
+                host: MacBookPro.lan
+                memory:
+                    total: "17179869184"
+                os: macOS-15.6.1-arm64-arm-64bit
+                program: /Users/jlee/Desktop/github/cv-training/training/train_yolo.py
+                python: CPython 3.12.0
+                root: /Users/jlee/Desktop/github/cv-training
+                startedAt: "2025-09-08T19:45:58.670715Z"
+                writerId: 8cnlpuky7x28lez05pfi2cbgzn3wzk70
+        m: []
+        python_version: 3.12.0
+        t:
+            "1":
+                - 1
+                - 105
+            "2":
+                - 1
+                - 41
+                - 105
+            "3":
+                - 13
+                - 16
+            "4": 3.12.0
+            "5": 0.21.3
+            "12": 0.21.3
+            "13": darwin-arm64
+batch_size:
+    value: 2
+dataset:
+    value: data/roi_masked_data/data.yaml
+device:
+    value: mps
+epochs:
+    value: 30
+image_size:
+    value: 1920
+model:
+    value: yolov8n.pt

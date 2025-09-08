@@ -1,0 +1,17 @@
+{
+  "os":  "macOS-15.6.1-arm64-arm-64bit",
+  "python":  "CPython 3.12.0",
+  "startedAt":  "2025-09-08T19:44:38.781620Z",
+  "program":  "/Users/jlee/Desktop/github/cv-training/training/train_yolo.py",
+  "codePath":  "training/train_yolo.py",
+  "codePathLocal":  "training/train_yolo.py",
+  "git":  {
+    "remote":  "https://github.com/jswlee/cv-training.git",
+    "commit":  "fdc3a4184577d5d0127498733f3981080606183d"
+  },
+  "email":  "jswleetaiwan@gmail.com",
+  "root":  "/Users/jlee/Desktop/github/cv-training",
+  "host":  "MacBookPro.lan",
+  "executable":  "/usr/local/bin/python3",
+  "writerId":  "5cbcvdq19zxs0zv9o6w9jb1cca85mvdp"
+}

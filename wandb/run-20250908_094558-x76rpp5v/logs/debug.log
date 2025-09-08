@@ -1,0 +1,23 @@
+2025-09-08 09:45:58,672 INFO    MainThread:9707 [wandb_setup.py:_flush():81] Current SDK version is 0.21.3
+2025-09-08 09:45:58,672 INFO    MainThread:9707 [wandb_setup.py:_flush():81] Configure stats pid to 9707
+2025-09-08 09:45:58,672 INFO    MainThread:9707 [wandb_setup.py:_flush():81] Loading settings from /Users/jlee/.config/wandb/settings
+2025-09-08 09:45:58,672 INFO    MainThread:9707 [wandb_setup.py:_flush():81] Loading settings from /Users/jlee/Desktop/github/cv-training/wandb/settings
+2025-09-08 09:45:58,672 INFO    MainThread:9707 [wandb_setup.py:_flush():81] Loading settings from environment variables
+2025-09-08 09:45:58,672 INFO    MainThread:9707 [wandb_init.py:setup_run_log_directory():686] Logging user logs to /Users/jlee/Desktop/github/cv-training/wandb/run-20250908_094558-x76rpp5v/logs/debug.log
+2025-09-08 09:45:58,672 INFO    MainThread:9707 [wandb_init.py:setup_run_log_directory():687] Logging internal logs to /Users/jlee/Desktop/github/cv-training/wandb/run-20250908_094558-x76rpp5v/logs/debug-internal.log
+2025-09-08 09:45:58,672 INFO    MainThread:9707 [wandb_init.py:init():813] calling init triggers
+2025-09-08 09:45:58,672 INFO    MainThread:9707 [wandb_init.py:init():818] wandb.init called with sweep_config: {}
+config: {'model': 'yolov8n.pt', 'epochs': 30, 'batch_size': 2, 'image_size': 1920, 'device': 'mps', 'dataset': 'data/roi_masked_data/data.yaml', '_wandb': {}}
+2025-09-08 09:45:58,672 INFO    MainThread:9707 [wandb_init.py:init():854] starting backend
+2025-09-08 09:45:58,890 INFO    MainThread:9707 [wandb_init.py:init():857] sending inform_init request
+2025-09-08 09:45:59,027 INFO    MainThread:9707 [wandb_init.py:init():865] backend started and connected
+2025-09-08 09:45:59,029 INFO    MainThread:9707 [wandb_init.py:init():936] updated telemetry
+2025-09-08 09:45:59,051 INFO    MainThread:9707 [wandb_init.py:init():960] communicating run to backend with 90.0 second timeout
+2025-09-08 09:45:59,635 INFO    MainThread:9707 [wandb_init.py:init():1011] starting run threads in backend
+2025-09-08 09:45:59,799 INFO    MainThread:9707 [wandb_run.py:_console_start():2494] atexit reg
+2025-09-08 09:45:59,799 INFO    MainThread:9707 [wandb_run.py:_redirect():2342] redirect: wrap_raw
+2025-09-08 09:45:59,799 INFO    MainThread:9707 [wandb_run.py:_redirect():2411] Wrapping output streams.
+2025-09-08 09:45:59,799 INFO    MainThread:9707 [wandb_run.py:_redirect():2434] Redirects installed.
+2025-09-08 09:45:59,801 INFO    MainThread:9707 [wandb_init.py:init():1057] run started, returning control to user process
+2025-09-08 10:00:09,372 INFO    wandb-AsyncioManager-main:9707 [service_client.py:_forward_responses():84] Reached EOF.
+2025-09-08 10:00:09,373 INFO    wandb-AsyncioManager-main:9707 [mailbox.py:close():137] Closing mailbox, abandoning 1 handles.
