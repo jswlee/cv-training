@@ -3,7 +3,7 @@ names:
 - person
 - surfboard
 nc: 3
-path: /Users/jlee/Desktop/github/cv-training/data/roi_masked_data
+path: data/roi_masked_data
 roboflow:
   license: MIT
   project: beach-counter-yzyfd
