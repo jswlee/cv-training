@@ -14,6 +14,12 @@ models:
   yolo_confidence: 0.5
   yolo_iou: 0.45
 
+# Weights & Biases configuration
+wandb:
+  project: "beach-detection"
+  name: "yolo-beach-training"
+  enabled: true
+
 # ROI detection settings
 roi:
   water_color_ranges:

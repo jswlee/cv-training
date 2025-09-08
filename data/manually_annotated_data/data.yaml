@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 3
+names: ['boat', 'person', 'surfboard']
+
+roboflow:
+  workspace: lee-ktitj
+  project: beach-counter-yzyfd
+  version: 2
+  license: MIT
+  url: https://universe.roboflow.com/lee-ktitj/beach-counter-yzyfd/dataset/2
