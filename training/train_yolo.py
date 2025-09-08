@@ -271,8 +271,8 @@ def main():
     try:
         model_path = train_yolo_model(
             dataset_yaml=dataset_yaml,
-            epochs=30,
-            batch_size=2,
+            epochs=150,
+            batch_size=4,
             img_size=1920,
             output_dir="runs",
             run_name="beach_detection",

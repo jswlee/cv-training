@@ -1,0 +1,75 @@
+_wandb:
+    value:
+        cli_version: 0.21.3
+        e:
+            t006uxnvu5zouofvzf3ckb2qnsuuxu4i:
+                codePath: training/train_yolo.py
+                codePathLocal: training/train_yolo.py
+                cpu_count: 16
+                cpu_count_logical: 16
+                cudaVersion: "12.2"
+                disk:
+                    /:
+                        total: "61285326848"
+                        used: "30351187968"
+                email: jswleetaiwan@gmail.com
+                executable: /home/exouser/cv-training/venv/bin/python3
+                git:
+                    commit: 4bb3c27f52b59577c96b874461faa719fabae056
+                    remote: git@github.com:jswlee/cv-training.git
+                gpu: GRID A100X-20C
+                gpu_count: 1
+                gpu_nvidia:
+                    - architecture: Ampere
+                      cudaCores: 6912
+                      memoryTotal: "21474836480"
+                      name: GRID A100X-20C
+                      uuid: GPU-78af4633-8cf1-11f0-8d88-da50ff7f0875
+                host: cv-training
+                memory:
+                    total: "63190450176"
+                os: Linux-6.14.0-29-generic-x86_64-with-glibc2.39
+                program: /home/exouser/cv-training/training/train_yolo.py
+                python: CPython 3.11.13
+                root: /home/exouser/cv-training
+                startedAt: "2025-09-08T21:08:56.871331Z"
+                writerId: t006uxnvu5zouofvzf3ckb2qnsuuxu4i
+        m:
+            - "1": epoch
+              "6":
+                - 3
+              "7": []
+            - "2": '*'
+              "5": 1
+              "6":
+                - 1
+              "7": []
+        python_version: 3.11.13
+        t:
+            "1":
+                - 1
+            "2":
+                - 1
+                - 41
+            "3":
+                - 1
+                - 7
+                - 13
+                - 16
+                - 62
+            "4": 3.11.13
+            "5": 0.21.3
+            "12": 0.21.3
+            "13": linux-x86_64
+batch_size:
+    value: 4
+dataset:
+    value: data/roi_filtered_data/data.yaml
+device:
+    value: cuda
+epochs:
+    value: 150
+image_size:
+    value: 1920
+model:
+    value: yolov8n.pt
