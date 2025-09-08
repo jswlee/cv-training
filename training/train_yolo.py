@@ -85,7 +85,7 @@ def log_ultralytics_outputs_to_wandb(run_dir: Path, best_model_path: Path):
 # ----------------------------- training ----------------------------------------
 
 def train_yolo_model(
-    dataset_yaml: str = "data/roi_masked_data/data.yaml",
+    dataset_yaml: str = "data/roi_filtered_data/data.yaml",
     model_size: str = "yolov8n.pt",
     epochs: int = 30,
     batch_size: int = 2,
@@ -215,7 +215,7 @@ def train_yolo_model(
 
 # ----------------------------- eval / inference -------------------------------
 
-def validate_model(model_path: str, dataset_yaml: str = "data/roi_masked_data/data.yaml"):
+def validate_model(model_path: str, dataset_yaml: str = "data/roi_filtered_data/data.yaml"):
     print(f"Validating on validation set: {model_path}")
     if not Path(model_path).exists():
         raise FileNotFoundError(f"Model not found: {model_path}")
@@ -225,7 +225,7 @@ def validate_model(model_path: str, dataset_yaml: str = "data/roi_masked_data/da
     return results
 
 
-def evaluate_on_test(model_path: str, dataset_yaml: str = "data/roi_masked_data/data.yaml"):
+def evaluate_on_test(model_path: str, dataset_yaml: str = "data/roi_filtered_data/data.yaml"):
     print(f"Final evaluation on test set: {model_path}")
     if not Path(model_path).exists():
         raise FileNotFoundError(f"Model not found: {model_path}")
@@ -259,9 +259,9 @@ def test_model_inference(model_path: str, test_image: str = None):
 # --------------------------------- main ---------------------------------------
 
 def main():
-    dataset_yaml = "data/roi_masked_data/data.yaml"
+    dataset_yaml = "data/roi_filtered_data/data.yaml"
 
-    labels_dir = Path("data/roi_masked_data/train/labels")
+    labels_dir = Path("data/roi_filtered_data/train/labels")
     if labels_dir.exists():
         non_empty = [f for f in labels_dir.glob("*.txt") if f.stat().st_size > 0]
         if not non_empty:

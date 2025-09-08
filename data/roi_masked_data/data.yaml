@@ -3,13 +3,13 @@ names:
 - person
 - surfboard
 nc: 3
-path: data/roi_masked_data
+path: /Users/jlee/Desktop/github/cv-training/data/roi_masked_data
 roboflow:
   license: MIT
   project: beach-counter-yzyfd
   url: https://universe.roboflow.com/lee-ktitj/beach-counter-yzyfd/dataset/2
   version: 2
   workspace: lee-ktitj
-test: test/images
-train: train/images
-val: valid/images
+test: data/roi_masked_data/test/images
+train: data/roi_masked_data/train/images
+val: data/roi_masked_data/valid/images

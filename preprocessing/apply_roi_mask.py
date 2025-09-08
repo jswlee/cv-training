@@ -136,10 +136,56 @@ def process_yolo_dataset(dataset_dir, output_dir):
         # Process images
         process_dataset(split_images_dir, output_split_images_dir)
         
-        # Copy label files (no changes needed for labels)
+        # Process label files to filter out objects in masked areas
         if split_labels_dir.exists():
+            # Get a sample image to determine dimensions
+            sample_images = list(split_images_dir.glob('*.jpg')) + list(split_images_dir.glob('*.png'))
+            if not sample_images:
+                print(f"No images found in {split_images_dir}, skipping label processing")
+                continue
+                
+            # Read a sample image to get dimensions
+            sample_img = cv2.imread(str(sample_images[0]))
+            if sample_img is None:
+                print(f"Could not read sample image {sample_images[0]}, skipping label processing")
+                continue
+                
+            # Create mask for this image size
+            height, width = sample_img.shape[:2]
+            mask = create_roi_mask((height, width), exclude_pool=True)
+            
+            # Process each label file
             for label_file in split_labels_dir.glob('*.txt'):
-                shutil.copy(label_file, output_split_labels_dir / label_file.name)
+                # Read labels
+                with open(label_file, 'r') as f:
+                    lines = f.readlines()
+                
+                # Filter labels
+                filtered_lines = []
+                for line in lines:
+                    parts = line.strip().split()
+                    if len(parts) >= 5:  # class x y w h format
+                        try:
+                            cls = int(parts[0])
+                            # YOLO format: x, y, w, h are normalized (0-1)
+                            x_center = float(parts[1]) 
+                            y_center = float(parts[2])
+                            
+                            # Convert to pixel coordinates
+                            x_pixel = int(x_center * width)
+                            y_pixel = int(y_center * height)
+                            
+                            # Check if center point is in the ROI (mask value is 1)
+                            if mask[y_pixel, x_pixel] == 1:
+                                filtered_lines.append(line)
+                        except (ValueError, IndexError) as e:
+                            print(f"Error processing label in {label_file}: {e}")
+                            # Keep the line if there's an error
+                            filtered_lines.append(line)
+                
+                # Write filtered labels
+                with open(output_split_labels_dir / label_file.name, 'w') as f:
+                    f.writelines(filtered_lines)
     
     # Copy the data.yaml file if it exists
     yaml_file = dataset_path / 'data.yaml'

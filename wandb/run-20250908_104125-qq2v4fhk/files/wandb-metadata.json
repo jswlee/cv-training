@@ -1,0 +1,37 @@
+{
+  "os":  "macOS-15.6.1-arm64-arm-64bit",
+  "python":  "CPython 3.12.0",
+  "startedAt":  "2025-09-08T20:41:25.327351Z",
+  "program":  "/Users/jlee/Desktop/github/cv-training/training/train_yolo.py",
+  "codePath":  "training/train_yolo.py",
+  "codePathLocal":  "training/train_yolo.py",
+  "git":  {
+    "remote":  "https://github.com/jswlee/cv-training.git",
+    "commit":  "37b8f648a77e814e656a34d2849b021326536d8a"
+  },
+  "email":  "jswleetaiwan@gmail.com",
+  "root":  "/Users/jlee/Desktop/github/cv-training",
+  "host":  "MacBookPro.lan",
+  "executable":  "/usr/local/bin/python3",
+  "cpu_count":  10,
+  "cpu_count_logical":  10,
+  "disk":  {
+    "/":  {
+      "total":  "994662584320",
+      "used":  "584771489792"
+    }
+  },
+  "memory":  {
+    "total":  "17179869184"
+  },
+  "apple":  {
+    "name":  "Apple M1 Pro",
+    "ecpuCores":  2,
+    "pcpuCores":  8,
+    "gpuCores":  16,
+    "memoryGb":  16,
+    "swapTotalBytes":  "3221225472",
+    "ramTotalBytes":  "17179869184"
+  },
+  "writerId":  "4kazkg733gnrgn8ongn4n8tbsxfc0i2n"
+}
