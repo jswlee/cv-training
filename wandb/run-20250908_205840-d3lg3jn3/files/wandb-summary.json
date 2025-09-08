@@ -1,0 +1,1 @@
+{"dataset/nc":3,"_timestamp":1.757365250662963e+09,"dataset/train_images":0,"dataset/val_images":0,"dataset/names":"boat, person, surfboard","_wandb":{"runtime":132},"system/gpu_mem_gb":2.604274176,"dataset/dataset_yaml":"data/roi_filtered_data/data.yaml","_step":29,"dataset/test_images":0,"_runtime":132,"epoch":29}

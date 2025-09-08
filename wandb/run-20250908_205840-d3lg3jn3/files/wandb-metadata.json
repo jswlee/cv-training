@@ -1,0 +1,40 @@
+{
+  "os": "Linux-6.14.0-29-generic-x86_64-with-glibc2.39",
+  "python": "CPython 3.11.13",
+  "startedAt": "2025-09-08T20:58:40.381460Z",
+  "program": "/home/exouser/cv-training/training/train_yolo.py",
+  "codePath": "training/train_yolo.py",
+  "codePathLocal": "training/train_yolo.py",
+  "git": {
+    "remote": "git@github.com:jswlee/cv-training.git",
+    "commit": "c50e867d7199b329c592fb6c2662e1002e169c38"
+  },
+  "email": "jswleetaiwan@gmail.com",
+  "root": "/home/exouser/cv-training",
+  "host": "cv-training",
+  "executable": "/home/exouser/cv-training/venv/bin/python3",
+  "cpu_count": 16,
+  "cpu_count_logical": 16,
+  "gpu": "GRID A100X-20C",
+  "gpu_count": 1,
+  "disk": {
+    "/": {
+      "total": "61285326848",
+      "used": "29349691392"
+    }
+  },
+  "memory": {
+    "total": "63190450176"
+  },
+  "gpu_nvidia": [
+    {
+      "name": "GRID A100X-20C",
+      "memoryTotal": "21474836480",
+      "cudaCores": 6912,
+      "architecture": "Ampere",
+      "uuid": "GPU-78af4633-8cf1-11f0-8d88-da50ff7f0875"
+    }
+  ],
+  "cudaVersion": "12.2",
+  "writerId": "dr3llmbu6tum4pc6a46gn65i9920n2ff"
+}
