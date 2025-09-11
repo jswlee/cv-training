@@ -283,7 +283,7 @@ def test_model_inference(model_path: str, test_image: str = None, config_path: s
         print(f"Model not found: {model_path}")
         return
     if test_image is None:
-        test_dir = Path("data/roi_masked_data/test/images")
+        test_dir = Path("data/roi_filtered_data/test/images")
         if test_dir.exists():
             imgs = list(test_dir.glob("*.jpg")) + list(test_dir.glob("*.png"))
             if imgs:
