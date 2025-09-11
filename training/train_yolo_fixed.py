@@ -6,7 +6,29 @@ import yaml
 import pandas as pd
 import torch
 import wandb
+import os
+import sys
 from ultralytics import YOLO
+
+# Volume configuration
+VOLUME_PATH = Path("/media/volume/yolo-training-data")
+
+def check_volume_available():
+    """Check if the attached volume is available and writable"""
+    if not VOLUME_PATH.exists():
+        raise RuntimeError(
+            f"Attached volume not found at {VOLUME_PATH}\n"
+            "Please ensure the volume is mounted and accessible."
+        )
+    
+    if not os.access(VOLUME_PATH, os.W_OK):
+        raise RuntimeError(
+            f"Volume at {VOLUME_PATH} is not writable\n"
+            "Please check volume permissions."
+        )
+    
+    print(f"✅ Volume available at: {VOLUME_PATH}")
+    return True
 
 def train_yolo_model(
     dataset_yaml: str = "data/roi_filtered_data/data.yaml",
@@ -14,12 +36,24 @@ def train_yolo_model(
     epochs: int = 150,
     batch_size: int = 4,
     img_size: int = 1920,
-    output_dir: str = "runs",
+    output_dir: str = None,  # Will be set to volume path
     run_name: str = "beach_detection_fixed",
     config_path: str = "config.yaml",
 ):
     print("Beach Conditions Agent - YOLO Training (Fixed)")
     print("=" * 50)
+
+    # Check volume availability first
+    check_volume_available()
+    
+    # Set output directory to volume path
+    if output_dir is None:
+        output_dir = str(VOLUME_PATH / "runs")
+    
+    # Create volume subdirectories
+    (VOLUME_PATH / "runs").mkdir(parents=True, exist_ok=True)
+    (VOLUME_PATH / "models").mkdir(parents=True, exist_ok=True)
+    (VOLUME_PATH / "wandb").mkdir(parents=True, exist_ok=True)
 
     dspath = Path(dataset_yaml)
     if not dspath.exists():
@@ -45,8 +79,11 @@ def train_yolo_model(
         device = "cpu"
     print(f"Using device: {device}")
 
-    # Init W&B
+    # Init W&B with volume path
     if use_wandb:
+        # Set W&B directory to volume
+        os.environ["WANDB_DIR"] = str(VOLUME_PATH / "wandb")
+        
         init_kwargs = dict(
             project=project,
             name=run_display,
@@ -126,7 +163,7 @@ def train_yolo_model(
         run_dir = Path(results.save_dir)
     
     best_auto = run_dir / "weights" / "best.pt"
-    best_model_path = Path(output_dir) / f"{run_name}.pt"
+    best_model_path = VOLUME_PATH / "models" / f"{run_name}.pt"
     best_model_path.parent.mkdir(parents=True, exist_ok=True)
     
     if best_auto.exists():
@@ -175,7 +212,7 @@ def main():
             epochs=150,
             batch_size=1,  # Reduced for YOLOv8x memory requirements
             img_size=1920,
-            output_dir="runs",
+            output_dir=None,  # Will use volume path
             run_name="beach_detection_fixed",
             config_path="config.yaml",
         )

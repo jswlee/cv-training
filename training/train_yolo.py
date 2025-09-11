@@ -7,8 +7,29 @@ import pandas as pd
 import torch
 import wandb
 import os
+import sys
 import argparse
 from ultralytics import YOLO
+
+# Volume configuration
+VOLUME_PATH = Path("/media/volume/yolo-training-data")
+
+def check_volume_available():
+    """Check if the attached volume is available and writable"""
+    if not VOLUME_PATH.exists():
+        raise RuntimeError(
+            f"Attached volume not found at {VOLUME_PATH}\n"
+            "Please ensure the volume is mounted and accessible."
+        )
+    
+    if not os.access(VOLUME_PATH, os.W_OK):
+        raise RuntimeError(
+            f"Volume at {VOLUME_PATH} is not writable\n"
+            "Please check volume permissions."
+        )
+    
+    print(f"✅ Volume available at: {VOLUME_PATH}")
+    return True
 
 
 # ----------------------------- helpers -----------------------------------------
@@ -114,12 +135,24 @@ def train_yolo_model(
     epochs: int = 30,
     batch_size: int = 2,
     img_size: int = 1920,
-    output_dir: str = None,
+    output_dir: str = "/media/volume/yolo-training-data",  # Will be set to volume path
     run_name: str = "beach_detection",
     config_path: str = "config.yaml",
 ):
     print("Beach Conditions Agent - YOLO Training")
     print("=" * 50)
+
+    # Check volume availability first
+    check_volume_available()
+    
+    # Set output directory to volume path
+    if output_dir is None:
+        output_dir = str(VOLUME_PATH / "runs")
+    
+    # Create volume subdirectories
+    (VOLUME_PATH / "runs").mkdir(parents=True, exist_ok=True)
+    (VOLUME_PATH / "models").mkdir(parents=True, exist_ok=True)
+    (VOLUME_PATH / "wandb").mkdir(parents=True, exist_ok=True)
 
     dspath = Path(dataset_yaml)
     if not dspath.exists():
