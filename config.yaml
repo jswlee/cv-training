@@ -63,6 +63,13 @@ paths:
   roi_zones: "data/roi_zones.json"
   models: "models"
 
+# Training output paths (for external volume storage)
+training_outputs:
+  base_path: "/media/volume/yolo-training-data"  # Jetstream2 volume path
+  models_dir: "models"
+  runs_dir: "runs" 
+  wandb_dir: "wandb"
+
 # Logging
 logging:
   level: "INFO"

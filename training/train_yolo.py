@@ -6,6 +6,7 @@ import yaml
 import pandas as pd
 import torch
 import wandb
+import os
 from ultralytics import YOLO
 
 
@@ -84,13 +85,35 @@ def log_ultralytics_outputs_to_wandb(run_dir: Path, best_model_path: Path):
 
 # ----------------------------- training ----------------------------------------
 
+def get_training_paths(config_path: str = "config.yaml"):
+    """Get training output paths from config, with fallback to local paths."""
+    if Path(config_path).exists():
+        cfg = yaml.safe_load(Path(config_path).read_text())
+        training_outputs = cfg.get("training_outputs", {})
+        base_path = training_outputs.get("base_path")
+        
+        if base_path and base_path != "/path/to/jetstream2/volume":
+            return {
+                "models_dir": Path(base_path) / training_outputs.get("models_dir", "models"),
+                "runs_dir": Path(base_path) / training_outputs.get("runs_dir", "runs"),
+                "wandb_dir": Path(base_path) / training_outputs.get("wandb_dir", "wandb")
+            }
+    
+    # Fallback to local paths
+    return {
+        "models_dir": Path("models"),
+        "runs_dir": Path("runs"),
+        "wandb_dir": Path("wandb")
+    }
+
+
 def train_yolo_model(
     dataset_yaml: str = "data/roi_filtered_data/data.yaml",
     model_size: str = "yolov8n.pt",
     epochs: int = 30,
     batch_size: int = 2,
     img_size: int = 1920,
-    output_dir: str = "runs",
+    output_dir: str = None,
     run_name: str = "beach_detection",
     config_path: str = "config.yaml",
 ):
@@ -103,6 +126,25 @@ def train_yolo_model(
             f"Dataset YAML not found: {dataset_yaml}\n"
             "Please create the ROI-masked dataset first."
         )
+
+    # Get training paths from config
+    training_paths = get_training_paths(config_path)
+    
+    # Use configured output directory or fallback
+    if output_dir is None:
+        output_dir = str(training_paths["runs_dir"])
+    
+    # Create output directories
+    for path in training_paths.values():
+        path.mkdir(parents=True, exist_ok=True)
+    
+    # Set W&B directory if configured
+    if "wandb_dir" in training_paths:
+        os.environ["WANDB_DIR"] = str(training_paths["wandb_dir"])
+    
+    print(f"Training outputs will be saved to: {output_dir}")
+    print(f"Models will be saved to: {training_paths['models_dir']}")
+    print(f"W&B logs will be saved to: {training_paths['wandb_dir']}")
 
     # W&B config
     wandb_cfg = {}
@@ -197,7 +239,7 @@ def train_yolo_model(
     # Determine run dir and best weights
     run_dir = find_run_dir(results, Path(output_dir) / run_name)
     best_auto = run_dir / "weights" / "best.pt"
-    best_model_path = Path(output_dir) / f"{run_name}.pt"
+    best_model_path = training_paths["models_dir"] / f"{run_name}.pt"
     best_model_path.parent.mkdir(parents=True, exist_ok=True)
     if best_auto.exists():
         best_model_path.write_bytes(best_auto.read_bytes())
@@ -235,7 +277,7 @@ def evaluate_on_test(model_path: str, dataset_yaml: str = "data/roi_filtered_dat
     return results
 
 
-def test_model_inference(model_path: str, test_image: str = None):
+def test_model_inference(model_path: str, test_image: str = None, config_path: str = "config.yaml"):
     if not Path(model_path).exists():
         print(f"Model not found: {model_path}")
         return
@@ -248,12 +290,35 @@ def test_model_inference(model_path: str, test_image: str = None):
     if not test_image or not Path(test_image).exists():
         print("No test image available for inference test")
         return
+    
+    # Get training paths from config
+    training_paths = get_training_paths(config_path)
+    
     print(f"Testing inference on: {test_image}")
     model = YOLO(model_path)
     results = model(test_image)
-    out = Path("inference_test_result.jpg")
+    
+    # Save to external volume
+    out = training_paths["models_dir"] / "inference_test_result.jpg"
     results[0].save(out)
     print(f"Result saved to: {out}")
+    
+    # Create a symlink in the project directory for convenience
+    local_out = Path("inference_test_result.jpg")
+    if local_out.exists():
+        local_out.unlink()
+    try:
+        local_out.symlink_to(out)
+        print(f"Created symlink at {local_out}")
+    except Exception as e:
+        print(f"Could not create symlink: {e}")
+        # Fall back to copy if symlink fails
+        try:
+            import shutil
+            shutil.copy(out, local_out)
+            print(f"Copied result to {local_out}")
+        except Exception:
+            pass
 
 
 # --------------------------------- main ---------------------------------------
@@ -274,7 +339,6 @@ def main():
             epochs=150,
             batch_size=4,
             img_size=1920,
-            output_dir="runs",
             run_name="beach_detection",
             config_path="config.yaml",
         )
@@ -283,7 +347,7 @@ def main():
         print("\nEvaluating on test set...")
         evaluate_on_test(model_path, dataset_yaml)
         print("\nTesting single-image inference...")
-        test_model_inference(model_path)
+        test_model_inference(model_path, config_path="config.yaml")
         print("\nDone.")
         print(f"Trained model: {model_path}")
     except Exception as e:
