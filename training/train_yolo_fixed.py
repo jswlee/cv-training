@@ -276,3 +276,71 @@ def train_yolo_model(
     best_auto = run_dir / "weights" / "best.pt"
     best_model_path = VOLUME_PATH / "models" / f"{run_name}.pt"
     best_model_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    if best_auto.exists():
+        best_model_path.write_bytes(best_auto.read_bytes())
+    else:
+        model.save(str(best_model_path))
+
+    print(f"Training complete. Best model saved to: {best_model_path}")
+
+    if use_wandb:
+        # Log final results
+        csv_path = run_dir / "results.csv"
+        if csv_path.exists():
+            try:
+                df = pd.read_csv(csv_path)
+                wandb.log({"training/results_table": wandb.Table(dataframe=df)})
+                if len(df):
+                    last = df.iloc[-1].to_dict()
+                    wandb.log({f"summary/{k}": v for k, v in last.items()})
+            except Exception as e:
+                print(f"[warn] Could not parse results.csv: {e}")
+
+        # Log plots
+        for name in ["results.png", "PR_curve.png", "F1_curve.png", "confusion_matrix.png"]:
+            p = run_dir / name
+            if p.exists():
+                wandb.log({f"plots/{p.stem}": wandb.Image(str(p))})
+
+        # Upload model artifact
+        if best_model_path.exists():
+            artifact = wandb.Artifact(name=f"beach-people-model-{wandb.run.id}", type="model")
+            artifact.add_file(str(best_model_path))
+            wandb.log_artifact(artifact)
+        
+        wandb.finish()
+
+    return str(best_model_path)
+
+def main():
+    dataset_yaml = "data/roi_filtered_data/data.yaml"
+    
+    try:
+        model_path = train_yolo_model(
+            dataset_yaml=dataset_yaml,
+            model_size="yolov8x.pt",  # Using YOLOv8x as requested
+            epochs=150,
+            batch_size=1,  # Reduced for YOLOv8x memory requirements
+            img_size=1920,
+            output_dir=None,  # Will use volume path
+            run_name="beach_detection_fixed",
+            config_path="config.yaml",
+        )
+        print(f"\nTraining completed successfully!")
+        print(f"Trained model: {model_path}")
+        
+        # Quick validation
+        model = YOLO(model_path)
+        results = model.val(data=dataset_yaml)
+        print(f"Final mAP50: {results.box.map50:.3f}")
+        print(f"Final mAP50-95: {results.box.map:.3f}")
+        
+    except Exception as e:
+        print(f"Training failed: {e}")
+        return 1
+    
+    return 0
+
+if __name__ == "__main__":
+    raise SystemExit(main())
