@@ -92,7 +92,7 @@ def get_training_paths(config_path: str = "config.yaml"):
         training_outputs = cfg.get("training_outputs", {})
         base_path = training_outputs.get("base_path")
         
-        if base_path and base_path != "/path/to/jetstream2/volume":
+        if base_path and base_path != "/media/volume/yolo-training-data":
             return {
                 "models_dir": Path(base_path) / training_outputs.get("models_dir", "models"),
                 "runs_dir": Path(base_path) / training_outputs.get("runs_dir", "runs"),
@@ -324,6 +324,10 @@ def test_model_inference(model_path: str, test_image: str = None, config_path: s
 # --------------------------------- main ---------------------------------------
 
 def main():
+    parser = argparse.ArgumentParser(description="Train YOLO model")
+    parser.add_argument("--model-size", default="yolov8n.pt", help="YOLO model size")
+    args = parser.parse_args()
+    
     dataset_yaml = "data/roi_filtered_data/data.yaml"
 
     labels_dir = Path("data/roi_filtered_data/train/labels")
@@ -341,6 +345,7 @@ def main():
             img_size=1920,
             run_name="beach_detection",
             config_path="config.yaml",
+            model_size=args.model_size,
         )
         print("\nValidating trained model...")
         validate_model(model_path, dataset_yaml)
