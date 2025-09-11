@@ -134,23 +134,22 @@ def train_yolo_model(
                 for i, param_group in enumerate(trainer.optimizer.param_groups):
                     log_dict[f"train/lr_pg{i}"] = param_group['lr']
             
-            # FIX: Add step parameter to synchronize logging
             wandb.log(log_dict, step=epoch)
         
-        def on_val_end(trainer):
+        def on_val_end(validator):
             """Log validation metrics after validation"""
             if not wandb.run:
                 return
-                
-            epoch = trainer.epoch
-            metrics = trainer.metrics if hasattr(trainer, 'metrics') else {}
+            
+            # FIX: Access epoch from the validator's trainer object
+            epoch = validator.trainer.epoch
             
             log_dict = {"epoch": epoch}
             
             # Validation losses
-            if hasattr(trainer, 'loss') and trainer.loss is not None:
-                if hasattr(trainer.loss, 'loss_items'):
-                    val_losses = trainer.loss.loss_items
+            if hasattr(validator, 'loss') and validator.loss is not None:
+                if hasattr(validator.loss, 'loss_items'):
+                    val_losses = validator.loss.loss_items
                     if len(val_losses) >= 3:
                         log_dict.update({
                             "val/box_loss": float(val_losses[0]),
@@ -159,8 +158,8 @@ def train_yolo_model(
                         })
             
             # Validation metrics from results
-            if hasattr(trainer, 'validator') and trainer.validator:
-                val_results = trainer.validator.metrics
+            if hasattr(validator, 'metrics'):
+                val_results = validator.metrics
                 if hasattr(val_results, 'results_dict'):
                     results_dict = val_results.results_dict
                     
@@ -189,7 +188,6 @@ def train_yolo_model(
                     if hasattr(box_metrics, 'mr'):
                         log_dict['val/recall'] = float(box_metrics.mr)
             
-            # FIX: Add step parameter to synchronize logging
             wandb.log(log_dict, step=epoch)
         
         def on_fit_epoch_end(trainer):
@@ -213,7 +211,6 @@ def train_yolo_model(
                     log_dict["system/data_time"] = times[0] if len(times) > 0 else 0
                     log_dict["system/forward_time"] = times[1] if len(times) > 1 else 0
             
-            # FIX: Add step parameter to synchronize logging
             wandb.log(log_dict, step=epoch)
         
         # Register callbacks
