@@ -134,7 +134,8 @@ def train_yolo_model(
                 for i, param_group in enumerate(trainer.optimizer.param_groups):
                     log_dict[f"train/lr_pg{i}"] = param_group['lr']
             
-            wandb.log(log_dict)
+            # FIX: Add step parameter to synchronize logging
+            wandb.log(log_dict, step=epoch)
         
         def on_val_end(trainer):
             """Log validation metrics after validation"""
@@ -188,7 +189,8 @@ def train_yolo_model(
                     if hasattr(box_metrics, 'mr'):
                         log_dict['val/recall'] = float(box_metrics.mr)
             
-            wandb.log(log_dict)
+            # FIX: Add step parameter to synchronize logging
+            wandb.log(log_dict, step=epoch)
         
         def on_fit_epoch_end(trainer):
             """Log system metrics and other info"""
@@ -211,7 +213,8 @@ def train_yolo_model(
                     log_dict["system/data_time"] = times[0] if len(times) > 0 else 0
                     log_dict["system/forward_time"] = times[1] if len(times) > 1 else 0
             
-            wandb.log(log_dict)
+            # FIX: Add step parameter to synchronize logging
+            wandb.log(log_dict, step=epoch)
         
         # Register callbacks
         model.add_callback("on_train_epoch_end", on_train_epoch_end)
