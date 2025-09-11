@@ -108,113 +108,57 @@ def train_yolo_model(
     
     # Add comprehensive W&B callbacks for metric tracking
     if use_wandb:
-        def on_train_epoch_end(trainer):
-            """Log training metrics after each epoch"""
+        def on_fit_epoch_end(trainer):
+            """
+            Logs training, validation, learning rate, and system metrics 
+            at the end of each epoch.
+            """
             if not wandb.run:
                 return
             
+            # --- Core Metrics ---
             epoch = trainer.epoch
-            metrics = trainer.metrics if hasattr(trainer, 'metrics') else {}
-            
-            # Training losses
             log_dict = {"epoch": epoch}
-            
-            # Box, class, and DFL losses
-            if hasattr(trainer, 'loss_items') and trainer.loss_items is not None:
-                loss_items = trainer.loss_items
-                if len(loss_items) >= 3:
-                    log_dict.update({
-                        "train/box_loss": float(loss_items[0]),
-                        "train/cls_loss": float(loss_items[1]), 
-                        "train/dfl_loss": float(loss_items[2]),
-                    })
-            
-            # Learning rates
+
+            # Get all metrics from the trainer, which holds the latest results
+            metrics = trainer.metrics
+            if metrics:
+                # Map YOLOv8 keys to more descriptive W&B keys
+                metric_mapping = {
+                    'train/box_loss': 'train/box_loss',
+                    'train/cls_loss': 'train/cls_loss',
+                    'train/dfl_loss': 'train/dfl_loss',
+                    'metrics/precision(B)': 'val/precision',
+                    'metrics/recall(B)': 'val/recall',
+                    'metrics/mAP50(B)': 'val/mAP50',
+                    'metrics/mAP50-95(B)': 'val/mAP50-95',
+                    'val/box_loss': 'val/box_loss',
+                    'val/cls_loss': 'val/cls_loss',
+                    'val/dfl_loss': 'val/dfl_loss',
+                    'fitness': 'val/fitness'
+                }
+                for yolo_key, wandb_key in metric_mapping.items():
+                    if yolo_key in metrics:
+                        log_dict[wandb_key] = metrics[yolo_key]
+
+            # --- Learning Rate ---
             if hasattr(trainer, 'optimizer') and trainer.optimizer:
                 for i, param_group in enumerate(trainer.optimizer.param_groups):
                     log_dict[f"train/lr_pg{i}"] = param_group['lr']
-            
-            wandb.log(log_dict, step=epoch)
-        
-        def on_val_end(validator):
-            """Log validation metrics after validation"""
-            if not wandb.run:
-                return
-            
-            # CORRECTED: Access epoch directly from the validator object
-            epoch = validator.epoch
-            
-            log_dict = {"epoch": epoch}
-            
-            # CORRECTED: Access validation losses directly from the validator.loss tensor
-            if hasattr(validator, 'loss') and validator.loss is not None:
-                val_losses = validator.loss
-                if len(val_losses) >= 3:
-                    log_dict.update({
-                        "val/box_loss": float(val_losses[0]),
-                        "val/cls_loss": float(val_losses[1]),
-                        "val/dfl_loss": float(val_losses[2]),
-                    })
-            
-            # Validation metrics from results
-            if hasattr(validator, 'metrics'):
-                val_results = validator.metrics
-                if hasattr(val_results, 'results_dict'):
-                    results_dict = val_results.results_dict
-                    
-                    # Map YOLO metric names to W&B names
-                    metric_mapping = {
-                        'metrics/precision(B)': 'val/precision',
-                        'metrics/recall(B)': 'val/recall', 
-                        'metrics/mAP50(B)': 'val/mAP50',
-                        'metrics/mAP50-95(B)': 'val/mAP50-95',
-                        'fitness': 'val/fitness'
-                    }
-                    
-                    for yolo_key, wandb_key in metric_mapping.items():
-                        if yolo_key in results_dict:
-                            log_dict[wandb_key] = float(results_dict[yolo_key])
-                
-                # Also try direct access to box metrics
-                if hasattr(val_results, 'box'):
-                    box_metrics = val_results.box
-                    if hasattr(box_metrics, 'map'):
-                        log_dict['val/mAP50-95'] = float(box_metrics.map)
-                    if hasattr(box_metrics, 'map50'):
-                        log_dict['val/mAP50'] = float(box_metrics.map50)
-                    if hasattr(box_metrics, 'mp'):
-                        log_dict['val/precision'] = float(box_metrics.mp)
-                    if hasattr(box_metrics, 'mr'):
-                        log_dict['val/recall'] = float(box_metrics.mr)
-            
-            wandb.log(log_dict, step=epoch)
-        
-        def on_fit_epoch_end(trainer):
-            """Log system metrics and other info"""
-            if not wandb.run:
-                return
-                
-            epoch = trainer.epoch
-            log_dict = {"epoch": epoch}
-            
-            # GPU memory
+
+            # --- System Metrics ---
             if torch.cuda.is_available():
                 log_dict["system/gpu_memory_allocated_gb"] = torch.cuda.max_memory_allocated() / 1e9
                 log_dict["system/gpu_memory_reserved_gb"] = torch.cuda.max_memory_reserved() / 1e9
             
-            # Training speed metrics
             if hasattr(trainer, 'times'):
                 times = trainer.times
                 if len(times) >= 2:
                     log_dict["system/epoch_time"] = sum(times)
-                    log_dict["system/data_time"] = times[0] if len(times) > 0 else 0
-                    log_dict["system/forward_time"] = times[1] if len(times) > 1 else 0
-            
+
             wandb.log(log_dict, step=epoch)
-        
-        # Register callbacks
-        model.add_callback("on_train_epoch_end", on_train_epoch_end)
-        model.add_callback("on_val_end", on_val_end) 
+
+        # Register the single, consolidated callback
         model.add_callback("on_fit_epoch_end", on_fit_epoch_end)
 
     # Train with optimized hyperparameters for fine-tuning
