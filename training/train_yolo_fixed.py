@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Fixed YOLO training with optimized hyperparameters for fine-tuning
+# Fixed YOLO training with optimized hyperparameters and robust W&B logging
 
 from pathlib import Path
 import yaml
@@ -94,7 +94,7 @@ def train_yolo_model(
                 "image_size": img_size,
                 "device": device,
                 "dataset": dataset_yaml,
-                "learning_rate": 0.001,  # Lower LR for fine-tuning
+                "learning_rate": 0.001,
                 "warmup_epochs": 5,
                 "patience": 50,
             },
@@ -110,21 +110,26 @@ def train_yolo_model(
     if use_wandb:
         def on_fit_epoch_end(trainer):
             """
-            Logs training, validation, learning rate, and system metrics 
-            at the end of each epoch.
+            Logs training and validation metrics at the end of each epoch
+            by reading the results.csv file. This is the most robust method.
             """
-            if not wandb.run:
+            if not wandb.run or not hasattr(trainer, 'csv'):
                 return
-            
-            # --- Core Metrics ---
-            epoch = trainer.epoch
-            log_dict = {"epoch": epoch}
 
-            # Get all metrics from the trainer, which holds the latest results
-            metrics = trainer.metrics
-            if metrics:
-                # Map YOLOv8 keys to more descriptive W&B keys
+            try:
+                # Read the latest row from the results CSV file
+                results_df = pd.read_csv(trainer.csv)
+                if results_df.empty:
+                    return
+                
+                latest_results = results_df.iloc[-1].to_dict()
+                
+                # Clean up column names (remove whitespace)
+                latest_results = {k.strip(): v for k, v in latest_results.items()}
+
+                # Define a mapping from CSV columns to W&B metric names
                 metric_mapping = {
+                    'epoch': 'epoch',
                     'train/box_loss': 'train/box_loss',
                     'train/cls_loss': 'train/cls_loss',
                     'train/dfl_loss': 'train/dfl_loss',
@@ -135,30 +140,26 @@ def train_yolo_model(
                     'val/box_loss': 'val/box_loss',
                     'val/cls_loss': 'val/cls_loss',
                     'val/dfl_loss': 'val/dfl_loss',
-                    'fitness': 'val/fitness'
                 }
-                for yolo_key, wandb_key in metric_mapping.items():
-                    if yolo_key in metrics:
-                        log_dict[wandb_key] = metrics[yolo_key]
 
-            # --- Learning Rate ---
-            if hasattr(trainer, 'optimizer') and trainer.optimizer:
-                for i, param_group in enumerate(trainer.optimizer.param_groups):
-                    log_dict[f"train/lr_pg{i}"] = param_group['lr']
+                # Prepare the log dictionary
+                log_dict = {}
+                for csv_key, wandb_key in metric_mapping.items():
+                    if csv_key in latest_results:
+                        log_dict[wandb_key] = latest_results[csv_key]
+                
+                # Log learning rates separately
+                if hasattr(trainer, 'optimizer'):
+                    for i, pg in enumerate(trainer.optimizer.param_groups):
+                        log_dict[f'train/lr_pg{i}'] = pg['lr']
 
-            # --- System Metrics ---
-            if torch.cuda.is_available():
-                log_dict["system/gpu_memory_allocated_gb"] = torch.cuda.max_memory_allocated() / 1e9
-                log_dict["system/gpu_memory_reserved_gb"] = torch.cuda.max_memory_reserved() / 1e9
-            
-            if hasattr(trainer, 'times'):
-                times = trainer.times
-                if len(times) >= 2:
-                    log_dict["system/epoch_time"] = sum(times)
+                # Log to W&B
+                wandb.log(log_dict, step=int(latest_results['epoch']))
 
-            wandb.log(log_dict, step=epoch)
+            except Exception as e:
+                print(f"[W&B Callback WARN] Failed to log metrics: {e}")
 
-        # Register the single, consolidated callback
+        # Register the callback
         model.add_callback("on_fit_epoch_end", on_fit_epoch_end)
 
     # Train with optimized hyperparameters for fine-tuning
@@ -171,52 +172,24 @@ def train_yolo_model(
         project=output_dir,
         name=run_name,
         save=True,
-        save_period=10,  # Save less frequently
+        save_period=10,
         val=True,
         plots=True,
         verbose=True,
-        # Optimized hyperparameters for fine-tuning
-        lr0=0.001,          # Lower initial learning rate
-        lrf=0.01,           # Lower final learning rate
-        momentum=0.937,     # Standard momentum
-        weight_decay=0.0005, # Standard weight decay
-        warmup_epochs=5,    # Longer warmup for stability
-        warmup_momentum=0.8,
-        warmup_bias_lr=0.1,
-        box=7.5,            # Box loss gain
-        cls=0.5,            # Class loss gain  
-        dfl=1.5,            # DFL loss gain
-        pose=12.0,          # Pose loss gain
-        kobj=1.0,           # Keypoint obj loss gain
-        label_smoothing=0.0, # No label smoothing initially
-        nbs=64,             # Nominal batch size
-        overlap_mask=True,
-        mask_ratio=4,
-        dropout=0.0,        # No dropout initially
-        # Data augmentation (reduced for fine-tuning)
-        hsv_h=0.015,        # Hue augmentation
-        hsv_s=0.7,          # Saturation augmentation  
-        hsv_v=0.4,          # Value augmentation
-        degrees=0.0,        # No rotation initially
-        translate=0.1,      # Small translation
-        scale=0.5,          # Scale augmentation
-        shear=0.0,          # No shear initially
-        perspective=0.0,    # No perspective initially
-        flipud=0.0,         # No vertical flip
-        fliplr=0.5,         # Horizontal flip
-        mosaic=1.0,         # Use mosaic augmentation
-        mixup=0.0,          # No mixup initially
-        copy_paste=0.0,     # No copy-paste initially
+        # Hyperparameters
+        lr0=0.001, lrf=0.01, momentum=0.937, weight_decay=0.0005,
+        warmup_epochs=5, warmup_momentum=0.8, warmup_bias_lr=0.1,
+        box=7.5, cls=0.5, dfl=1.5,
+        # Data augmentation
+        hsv_h=0.015, hsv_s=0.7, hsv_v=0.4,
+        degrees=0.0, translate=0.1, scale=0.5, shear=0.0, perspective=0.0,
+        flipud=0.0, fliplr=0.5, mosaic=1.0, mixup=0.0, copy_paste=0.0,
         # Validation settings
-        patience=50,        # Early stopping patience
-        close_mosaic=10,    # Disable mosaic in last N epochs
+        patience=50, close_mosaic=10,
     )
 
     # Determine run dir and best weights
-    run_dir = Path(output_dir) / run_name
-    if hasattr(results, 'save_dir') and results.save_dir:
-        run_dir = Path(results.save_dir)
-    
+    run_dir = Path(results.save_dir)
     best_auto = run_dir / "weights" / "best.pt"
     best_model_path = VOLUME_PATH / "models" / f"{run_name}.pt"
     best_model_path.parent.mkdir(parents=True, exist_ok=True)
@@ -229,17 +202,29 @@ def train_yolo_model(
     print(f"Training complete. Best model saved to: {best_model_path}")
 
     if use_wandb:
-        # Log final results
         csv_path = run_dir / "results.csv"
         if csv_path.exists():
             try:
                 df = pd.read_csv(csv_path)
+                # Clean column names
+                df.columns = df.columns.str.strip()
+                
+                # Log the full results table
                 wandb.log({"training/results_table": wandb.Table(dataframe=df)})
-                if len(df):
-                    last = df.iloc[-1].to_dict()
-                    wandb.log({f"summary/{k}": v for k, v in last.items()})
+                
+                # --- LOG SUMMARY METRICS (as requested from docs) ---
+                # Find the epoch with the best mAP50-95
+                best_epoch = df.loc[df['metrics/mAP50-95(B)'].idxmax()]
+                
+                # Update wandb.summary with the best metrics
+                wandb.summary["best_epoch"] = int(best_epoch['epoch'])
+                wandb.summary["best_mAP50-95"] = best_epoch['metrics/mAP50-95(B)']
+                wandb.summary["best_mAP50"] = best_epoch['metrics/mAP50(B)']
+                wandb.summary["best_precision"] = best_epoch['metrics/precision(B)']
+                wandb.summary["best_recall"] = best_epoch['metrics/recall(B)']
+
             except Exception as e:
-                print(f"[warn] Could not parse results.csv: {e}")
+                print(f"[warn] Could not parse results.csv for summary: {e}")
 
         # Log plots
         for name in ["results.png", "PR_curve.png", "F1_curve.png", "confusion_matrix.png"]:
@@ -263,13 +248,11 @@ def main():
     try:
         model_path = train_yolo_model(
             dataset_yaml=dataset_yaml,
-            model_size="yolov8x.pt",  # Using YOLOv8x as requested
+            model_size="yolov8x.pt",
             epochs=150,
-            batch_size=1,  # Reduced for YOLOv8x memory requirements
+            batch_size=1,
             img_size=1920,
-            output_dir=None,  # Will use volume path
             run_name="beach_detection_fixed",
-            config_path="config.yaml",
         )
         print(f"\nTraining completed successfully!")
         print(f"Trained model: {model_path}")
