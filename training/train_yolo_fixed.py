@@ -233,6 +233,15 @@ def train_yolo_model(
         hsv_h=0.015, hsv_s=0.7, hsv_v=0.4,
         degrees=0.0, translate=0.1, scale=0.5, shear=0.0, perspective=0.0,
         flipud=0.0, fliplr=0.5, mosaic=1.0, mixup=0.0, copy_paste=0.0,
+
+        # New data augmentation
+        degrees=10.0,         # Add random rotation up to 10 degrees
+        translate=0.1,        # Keep small translation
+        scale=0.5,            # Keep scaling
+        perspective=0.001,    # Add a slight perspective shift
+        mixup=0.1,            # Enable MixUp with 10% probability
+        copy_paste=0.1,       # CRITICAL: Enable Copy-Paste with 10% probability
+        
         # Validation settings
         patience=30, close_mosaic=10,
     )
