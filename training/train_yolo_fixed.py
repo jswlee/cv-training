@@ -257,11 +257,11 @@ def main():
         print(f"\nTraining completed successfully!")
         print(f"Trained model: {model_path}")
         
-        # Quick validation
+        # Final evaluation on test set
         model = YOLO(model_path)
-        results = model.val(data=dataset_yaml)
-        print(f"Final mAP50: {results.box.map50:.3f}")
-        print(f"Final mAP50-95: {results.box.map:.3f}")
+        results = model.val(data=dataset_yaml, split='test')
+        print(f"Test mAP50: {results.box.map50:.3f}")
+        print(f"Test mAP50-95: {results.box.map:.3f}")
         
     except Exception as e:
         print(f"Training failed: {e}")
