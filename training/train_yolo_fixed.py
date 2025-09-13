@@ -225,9 +225,10 @@ def train_yolo_model(
         plots=True,
         verbose=True,
         # Hyperparameters
-        lr0=0.0001, lrf=0.01, momentum=0.937, weight_decay=0.0005,
+        lr0=0.00001, lrf=0.01, momentum=0.937, weight_decay=0.0005,
         warmup_epochs=20, warmup_momentum=0.8, warmup_bias_lr=0.1,
         box=7.5, cls=0.5, dfl=1.5,
+        freeze=10,
         # Data augmentation
         hsv_h=0.015, hsv_s=0.7, hsv_v=0.4,
         degrees=0.0, translate=0.1, scale=0.5, shear=0.0, perspective=0.0,
