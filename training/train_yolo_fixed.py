@@ -7,7 +7,8 @@ import pandas as pd
 import torch
 import wandb
 import os
-import sys
+import subprocess
+import time
 from ultralytics import YOLO
 
 # Volume configuration
@@ -29,6 +30,61 @@ def check_volume_available():
     
     print(f"✅ Volume available at: {VOLUME_PATH}")
     return True
+
+def sync_to_gdrive(local_path, remote_path, rclone_config="rclone.conf", remote_name="gdrive"):
+    """
+    Sync training results to Google Drive using rclone
+    
+    Args:
+        local_path: Local path to sync from
+        remote_path: Remote path on Google Drive to sync to
+        rclone_config: Path to rclone config file
+        remote_name: Name of the remote in rclone config
+    
+    Returns:
+        bool: True if sync was successful, False otherwise
+    """
+    try:
+        # Check if rclone is installed
+        try:
+            subprocess.run(["rclone", "version"], check=True, capture_output=True)
+        except (subprocess.SubprocessError, FileNotFoundError):
+            print("⚠️ rclone not found. Please install rclone first.")
+            return False
+            
+        # Check if config file exists
+        config_path = Path(rclone_config)
+        if not config_path.exists():
+            print(f"⚠️ rclone config not found at {config_path}")
+            return False
+            
+        # Ensure local path exists
+        if not Path(local_path).exists():
+            print(f"⚠️ Local path not found: {local_path}")
+            return False
+            
+        # Run rclone sync command
+        print(f"🔄 Syncing {local_path} to Google Drive:{remote_path}...")
+        cmd = [
+            "rclone", "sync",
+            str(local_path),
+            f"{remote_name}:{remote_path}",
+            "--progress",
+            "--config", str(config_path)
+        ]
+        
+        process = subprocess.run(cmd, check=False, capture_output=True, text=True)
+        
+        if process.returncode == 0:
+            print(f"✅ Successfully synced to Google Drive:{remote_path}")
+            return True
+        else:
+            print(f"❌ Failed to sync to Google Drive: {process.stderr}")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Error syncing to Google Drive: {e}")
+        return False
 
 def train_yolo_model(
     dataset_yaml: str = "data/roi_filtered_data/data.yaml",
@@ -96,7 +152,7 @@ def train_yolo_model(
                 "dataset": dataset_yaml,
                 "learning_rate": 0.001,
                 "warmup_epochs": 5,
-                "patience": 50,
+                "patience": 10,
             },
         )
         if entity:
@@ -185,7 +241,7 @@ def train_yolo_model(
         degrees=0.0, translate=0.1, scale=0.5, shear=0.0, perspective=0.0,
         flipud=0.0, fliplr=0.5, mosaic=1.0, mixup=0.0, copy_paste=0.0,
         # Validation settings
-        patience=50, close_mosaic=10,
+        patience=10, close_mosaic=10,
     )
 
     # Determine run dir and best weights
@@ -245,23 +301,91 @@ def train_yolo_model(
 def main():
     dataset_yaml = "data/roi_filtered_data/data.yaml"
     
+    # Parse command line arguments
+    import argparse
+    parser = argparse.ArgumentParser(description="Train YOLO model with optimized hyperparameters")
+    parser.add_argument("--sync-gdrive", action="store_true", help="Sync results to Google Drive after training")
+    parser.add_argument("--gdrive-path", type=str, default="yolo-training-results", 
+                        help="Path on Google Drive to sync results to")
+    parser.add_argument("--rclone-config", type=str, default="rclone.conf", 
+                        help="Path to rclone config file")
+    parser.add_argument("--remote-name", type=str, default="GDrive", 
+                        help="Name of the remote in rclone config")
+    parser.add_argument("--epochs", type=int, default=200, 
+                        help="Number of training epochs")
+    parser.add_argument("--batch-size", type=int, default=1, 
+                        help="Batch size for training")
+    parser.add_argument("--img-size", type=int, default=1920, 
+                        help="Image size for training")
+    parser.add_argument("--model", type=str, default="yolov8x.pt", 
+                        help="Model to use for training")
+    parser.add_argument("--run-name", type=str, default="beach_detection_fixed", 
+                        help="Name for this training run")
+    
+    args = parser.parse_args()
+    
     try:
+        run_name = args.run_name
         model_path = train_yolo_model(
             dataset_yaml=dataset_yaml,
-            model_size="yolov8x.pt",
-            epochs=200,
-            batch_size=1,
-            img_size=1920,
-            run_name="beach_detection_fixed",
+            model_size=args.model,
+            epochs=args.epochs,
+            batch_size=args.batch_size,
+            img_size=args.img_size,
+            run_name=run_name,
         )
         print(f"\nTraining completed successfully!")
         print(f"Trained model: {model_path}")
         
         # Final evaluation on test set
+        print("\nRunning final evaluation on test set...")
         model = YOLO(model_path)
-        results = model.val(data=dataset_yaml, split='test')
-        print(f"Test mAP50: {results.box.map50:.3f}")
-        print(f"Test mAP50-95: {results.box.map:.3f}")
+        try:
+            # Use lower image size and half precision for test to avoid OOM
+            results = model.val(
+                data=dataset_yaml, 
+                split='test',
+                imgsz=1280,  # Lower image size for evaluation
+                batch=1,     # Small batch size
+                half=True,   # Use half precision
+                plots=True   # Generate plots
+            )
+            print(f"Test mAP50: {results.box.map50:.3f}")
+            print(f"Test mAP50-95: {results.box.map:.3f}")
+        except Exception as e:
+            print(f"Test evaluation failed: {e}")
+        
+        # Sync to Google Drive if requested
+        if args.sync_gdrive:
+            print("\nSyncing results to Google Drive...")
+            
+            # Sync the model file
+            sync_to_gdrive(
+                local_path=str(model_path),
+                remote_path=f"{args.gdrive_path}/models/{run_name}.pt",
+                rclone_config=args.rclone_config,
+                remote_name=args.remote_name
+            )
+            
+            # Sync the runs directory for this run
+            run_dir = VOLUME_PATH / "runs" / run_name
+            if run_dir.exists():
+                sync_to_gdrive(
+                    local_path=str(run_dir),
+                    remote_path=f"{args.gdrive_path}/runs/{run_name}",
+                    rclone_config=args.rclone_config,
+                    remote_name=args.remote_name
+                )
+            
+            # Sync the W&B directory if it exists
+            wandb_dir = VOLUME_PATH / "wandb"
+            if wandb_dir.exists():
+                sync_to_gdrive(
+                    local_path=str(wandb_dir),
+                    remote_path=f"{args.gdrive_path}/wandb",
+                    rclone_config=args.rclone_config,
+                    remote_name=args.remote_name
+                )
         
     except Exception as e:
         print(f"Training failed: {e}")
