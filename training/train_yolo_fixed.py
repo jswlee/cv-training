@@ -89,6 +89,7 @@ def train_yolo_model(
     config_path: str = "config.yaml",
     freeze: int = 10,
     lr0: float = 0.00001,
+    patience: int = 50,
 ):
     print("Beach Conditions Agent - YOLO Training (Fixed)")
     print("=" * 50)
@@ -146,7 +147,7 @@ def train_yolo_model(
                 "dataset": dataset_yaml,
                 "learning_rate": 0.001,
                 "warmup_epochs": 20,
-                "patience": 30,
+                "patience": 50,
             },
         )
         if entity:
@@ -237,7 +238,7 @@ def train_yolo_model(
         flipud=0.0, fliplr=0.5, mosaic=1.0, mixup=0.0, copy_paste=0.1,
         
         # Validation settings
-        patience=30, close_mosaic=10,
+        patience=patience, close_mosaic=10,
     )
 
     # Determine run dir and best weights
@@ -319,6 +320,8 @@ def main():
                         help="Number of layers to freeze")
     parser.add_argument("--lr0", type=float, default=0.00001, 
                         help="Initial learning rate")
+    parser.add_argument("--patience", type=int, default=50, 
+                        help="Patience for early stopping")
     
     args = parser.parse_args()
     
@@ -333,6 +336,7 @@ def main():
             run_name=run_name,
             freeze=args.freeze,
             lr0=args.lr0,
+            patience=args.patience,
         )
         print(f"\nTraining completed successfully!")
         print(f"Trained model: {model_path}")
