@@ -87,6 +87,8 @@ def train_yolo_model(
     output_dir: str = None,  # Will be set to volume path
     run_name: str = "beach_detection_fixed",
     config_path: str = "config.yaml",
+    freeze: int = 10,
+    lr0: float = 0.00001,
 ):
     print("Beach Conditions Agent - YOLO Training (Fixed)")
     print("=" * 50)
@@ -225,10 +227,10 @@ def train_yolo_model(
         plots=True,
         verbose=True,
         # Hyperparameters
-        lr0=0.00001, lrf=0.01, momentum=0.937, weight_decay=0.0005,
+        lr0=lr0, lrf=0.01, momentum=0.937, weight_decay=0.0005,
         warmup_epochs=20, warmup_momentum=0.8, warmup_bias_lr=0.1,
         box=7.5, cls=0.5, dfl=1.5,
-        freeze=10,
+        freeze=freeze,
         # Data augmentation
         hsv_h=0.015, hsv_s=0.7, hsv_v=0.4,
         degrees=0.0, translate=0.1, scale=0.5, shear=0.0, perspective=0.0,
@@ -313,6 +315,8 @@ def main():
                         help="Model to use for training")
     parser.add_argument("--run-name", type=str, default="beach_detection_fixed", 
                         help="Name for this training run")
+    parser.add_argument("--freeze", type=int, default=10, 
+                        help="Number of layers to freeze")
     
     args = parser.parse_args()
     
@@ -325,6 +329,8 @@ def main():
             batch_size=args.batch_size,
             img_size=args.img_size,
             run_name=run_name,
+            freeze=args.freeze,
+            lr0=args.lr0,
         )
         print(f"\nTraining completed successfully!")
         print(f"Trained model: {model_path}")
