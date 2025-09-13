@@ -317,6 +317,8 @@ def main():
                         help="Name for this training run")
     parser.add_argument("--freeze", type=int, default=10, 
                         help="Number of layers to freeze")
+    parser.add_argument("--lr0", type=float, default=0.00001, 
+                        help="Initial learning rate")
     
     args = parser.parse_args()
     
