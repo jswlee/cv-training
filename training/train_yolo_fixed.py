@@ -87,6 +87,7 @@ def train_yolo_model(
     output_dir: str = None,  # Will be set to volume path
     run_name: str = "beach_detection_fixed",
     config_path: str = "config.yaml",
+    start_epoch: int = 20,
 ):
     print("Beach Conditions Agent - YOLO Training (Fixed)")
     print("=" * 50)
@@ -144,7 +145,7 @@ def train_yolo_model(
                 "dataset": dataset_yaml,
                 "learning_rate": 0.001,
                 "warmup_epochs": 5,
-                "patience": 20,
+                "patience": 10,
             },
         )
         if entity:
@@ -234,6 +235,8 @@ def train_yolo_model(
         flipud=0.0, fliplr=0.5, mosaic=1.0, mixup=0.0, copy_paste=0.0,
         # Validation settings
         patience=20, close_mosaic=10,
+        # Start monitoring for early stopping only after this epoch
+        start_epoch=start_epoch,
     )
 
     # Determine run dir and best weights
@@ -311,6 +314,8 @@ def main():
                         help="Model to use for training")
     parser.add_argument("--run-name", type=str, default="beach_detection_fixed", 
                         help="Name for this training run")
+    parser.add_argument("--start-epoch", type=int, default=20, 
+                        help="Start monitoring for early stopping only after this epoch")
     
     args = parser.parse_args()
     
@@ -323,6 +328,7 @@ def main():
             batch_size=args.batch_size,
             img_size=args.img_size,
             run_name=run_name,
+            start_epoch=args.start_epoch,
         )
         print(f"\nTraining completed successfully!")
         print(f"Trained model: {model_path}")
