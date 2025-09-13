@@ -220,7 +220,7 @@ def train_yolo_model(
         project=output_dir,
         name=run_name,
         save=True,
-        save_period=10,
+        save_period=-1,  # Disable periodic checkpoint saving
         val=True,
         plots=True,
         verbose=True,
@@ -232,7 +232,7 @@ def train_yolo_model(
         # Data augmentation
         hsv_h=0.015, hsv_s=0.7, hsv_v=0.4,
         degrees=0.0, translate=0.1, scale=0.5, shear=0.0, perspective=0.0,
-        flipud=0.0, fliplr=0.5, mosaic=1.0, mixup=0.0, copy_paste=0.05,
+        flipud=0.0, fliplr=0.5, mosaic=1.0, mixup=0.0, copy_paste=0.1,
         
         # Validation settings
         patience=30, close_mosaic=10,
