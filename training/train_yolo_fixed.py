@@ -144,7 +144,7 @@ def train_yolo_model(
                 "dataset": dataset_yaml,
                 "learning_rate": 0.001,
                 "warmup_epochs": 5,
-                "patience": 15,
+                "patience": 20,
             },
         )
         if entity:
@@ -233,7 +233,7 @@ def train_yolo_model(
         degrees=0.0, translate=0.1, scale=0.5, shear=0.0, perspective=0.0,
         flipud=0.0, fliplr=0.5, mosaic=1.0, mixup=0.0, copy_paste=0.0,
         # Validation settings
-        patience=15, close_mosaic=10,
+        patience=20, close_mosaic=10,
     )
 
     # Determine run dir and best weights
