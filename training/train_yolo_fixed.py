@@ -87,7 +87,6 @@ def train_yolo_model(
     output_dir: str = None,  # Will be set to volume path
     run_name: str = "beach_detection_fixed",
     config_path: str = "config.yaml",
-    start_epoch: int = 20,
 ):
     print("Beach Conditions Agent - YOLO Training (Fixed)")
     print("=" * 50)
@@ -144,7 +143,7 @@ def train_yolo_model(
                 "device": device,
                 "dataset": dataset_yaml,
                 "learning_rate": 0.001,
-                "warmup_epochs": 5,
+                "warmup_epochs": 20,
                 "patience": 10,
             },
         )
@@ -227,16 +226,14 @@ def train_yolo_model(
         verbose=True,
         # Hyperparameters
         lr0=0.001, lrf=0.01, momentum=0.937, weight_decay=0.0005,
-        warmup_epochs=5, warmup_momentum=0.8, warmup_bias_lr=0.1,
+        warmup_epochs=20, warmup_momentum=0.8, warmup_bias_lr=0.1,
         box=7.5, cls=0.5, dfl=1.5,
         # Data augmentation
         hsv_h=0.015, hsv_s=0.7, hsv_v=0.4,
         degrees=0.0, translate=0.1, scale=0.5, shear=0.0, perspective=0.0,
         flipud=0.0, fliplr=0.5, mosaic=1.0, mixup=0.0, copy_paste=0.0,
         # Validation settings
-        patience=20, close_mosaic=10,
-        # Start monitoring for early stopping only after this epoch
-        start_epoch=start_epoch,
+        patience=10, close_mosaic=10,
     )
 
     # Determine run dir and best weights
@@ -314,8 +311,6 @@ def main():
                         help="Model to use for training")
     parser.add_argument("--run-name", type=str, default="beach_detection_fixed", 
                         help="Name for this training run")
-    parser.add_argument("--start-epoch", type=int, default=20, 
-                        help="Start monitoring for early stopping only after this epoch")
     
     args = parser.parse_args()
     
@@ -328,7 +323,6 @@ def main():
             batch_size=args.batch_size,
             img_size=args.img_size,
             run_name=run_name,
-            start_epoch=args.start_epoch,
         )
         print(f"\nTraining completed successfully!")
         print(f"Trained model: {model_path}")
