@@ -249,7 +249,7 @@ def main():
         model_path = train_yolo_model(
             dataset_yaml=dataset_yaml,
             model_size="yolov8x.pt",
-            epochs=150,
+            epochs=200,
             batch_size=1,
             img_size=1920,
             run_name="beach_detection_fixed",
